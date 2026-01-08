@@ -33,27 +33,35 @@ st.write("물건의 위치를 알려주면 저장하고, 물어보면 찾아줍�
 user_input = st.text_input("질문하거나 위치를 알려주세요", placeholder="예: '망치 거실 서랍에 둠' 또는 '망치 어디 있어?'")
 
 if st.button("보내기") and user_input:
-    # 시트에서 최신 데이터 가져오기
-    data = sheet.get_all_records()
+    # 1. 모든 데이터를 값 형태로 가져옵니다. (get_all_records 대신 get_all_values 사용)
+    all_values = sheet.get_all_values()
     
-    # AI에게 줄 지시문(프롬프트) 강화
+    # 2. 데이터를 AI가 이해하기 쉬운 텍스트 형식으로 변환합니다.
+    inventory_list = []
+    for row in all_values:
+        if len(row) >= 2:
+            inventory_list.append(f"- 물건: {row[0]}, 위치: {row[1]}")
+    
+    context_data = "\n".join(inventory_list)
+    
+    # 3. AI에게 주는 지시문(프롬프트) 강화
     prompt = f"""
-    너는 우리 집 물건의 위치를 완벽하게 기억하는 똑똑한 비서야.
-    
-    [현재 저장된 물건 데이터]
-    {data}
-    
+    너는 우리 집 물건 위치를 관리하는 전문 비서야. 
+    아래 [우리 집 물건 목록]을 반드시 한 줄씩 정독하고 사용자의 질문에 답해줘.
+
+    [우리 집 물건 목록]
+    {context_data}
+
     [사용자 입력]
     {user_input}
-    
+
     [규칙]
-    1. 사용자가 물건의 위치를 새로 알려주면 반드시 'SAVE|물건|위치' 형식으로만 대답해.
-    2. 사용자가 물건의 위치를 물어보면, 위 데이터에서 해당 물건을 찾아 그 위치를 친절하게 알려줘.
-    3. 만약 데이터에 없는 물건을 물어보면 "죄송해요, 그 물건의 위치는 아직 저장되지 않았어요."라고 답해줘.
-    4. 데이터에 있는 물건이라도 사용자가 위치를 새로 알려주면 업데이트를 위해 SAVE 형식을 사용해.
+    1. 사용자가 위치를 물어보면 위 목록에서 해당 물건을 찾아 그 옆에 적힌 위치만 정확히 말해줘. 
+    2. 목록에 있는 물건인데 엉뚱한 위치를 말하면 절대 안 돼.
+    3. 만약 새로운 위치를 알려주면(예: '~는 ~에 있어') 반드시 'SAVE|물건|위치' 형식으로 답해.
     """
     
-    with st.spinner('생각 중...'):
+    with st.spinner('시트를 확인하며 생각 중...'):
         response = model.generate_content(prompt).text.strip()
     
     # 저장 로직
