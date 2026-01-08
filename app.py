@@ -32,7 +32,7 @@ st.markdown("""
     .main-title {
         font-size: 22px !important;  /* 24px보다 조금 더 줄였습니다 */
         font-weight: bold;
-        color: #1E1E1E;
+        color: #BBBBBB;
         padding-top: 5px;
         padding-bottom: 5px;
     }
