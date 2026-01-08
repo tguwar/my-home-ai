@@ -1,14 +1,37 @@
 import streamlit as st
+import gspread
 import google.generativeai as genai
+from google.oauth2.service_account import Credentials
 
-st.title("API 모델 확인 모드")
-gemini_key = st.secrets["gemini_api_key"]
-genai.configure(api_key=gemini_key)
-
+# 1. 보안 설정 (Streamlit Cloud Secrets에서 불러옴)
 try:
-    models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    st.write("### 사용 가능한 모델 목록:")
-    st.write(models)
-    st.info("위 목록에 있는 이름을 코드에 써야 합니다.")
-except Exception as e:
-    st.error(f"모델 목록을 가져오지 못했습니다. API 키나 설정 문제입니다: {e}")
+    creds_dict = st.secrets["gcp_service_account"]
+    gemini_key = st.secrets["gemini_api_key"]
+except:
+    st.error("Secrets 설정이 필요합니다.")
+    st.stop()
+
+# 2. 구글 시트 및 제미나이 연결
+scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+client = gspread.authorize(creds)
+sheet = client.open("home-finder").sheet1
+genai.configure(api_key=gemini_key)
+model = genai.GenerativeModel('models/gemini-2.5-flash')
+
+# 3. 화면 구성
+st.title("🏠 우리 집 물건 위치 비서")
+user_input = st.text_input("질문하거나 위치를 알려주세요", placeholder="예: '망치 어디 있어?' 또는 '침대 밑에 상자 둠'")
+
+if st.button("보내기") and user_input:
+    data = sheet.get_all_records()
+    prompt = f"현재 데이터: {data}\n사용자 입력: {user_input}\n질문이면 답변하고, 저장 요청이면 'SAVE|물건|위치'라고만 답해줘."
+    
+    response = model.generate_content(prompt).text
+    
+    if "SAVE|" in response:
+        _, item, loc = response.split("|")
+        sheet.append_row([item, loc.strip()])
+        st.success(f"✅ '{item}' 위치를 '{loc}'로 저장했습니다!")
+    else:
+        st.info(response)
