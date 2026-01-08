@@ -17,7 +17,7 @@ creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
 client = gspread.authorize(creds)
 sheet = client.open("home-finder").sheet1
 genai.configure(api_key=gemini_key)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 # 3. 화면 구성
 st.title("🏠 우리 집 물건 위치 비서")
