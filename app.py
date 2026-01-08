@@ -3,7 +3,7 @@ import gspread
 import google.generativeai as genai
 from google.oauth2.service_account import Credentials
 
-# 1. 보안 설정 (Streamlit Cloud Secrets에서 불러옴)
+# 1. 보안 설정
 try:
     creds_dict = st.secrets["gcp_service_account"]
     gemini_key = st.secrets["gemini_api_key"]
@@ -15,23 +15,63 @@ except:
 scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
 client = gspread.authorize(creds)
-sheet = client.open("home-finder").sheet1
+
+# 시트 이름 확인! "home-finder"가 맞는지 꼭 확인하세요.
+try:
+    sheet = client.open("home-finder").sheet1
+except Exception as e:
+    st.error(f"구글 시트를 열 수 없습니다. 이름을 확인해주세요: {e}")
+    st.stop()
+
 genai.configure(api_key=gemini_key)
 model = genai.GenerativeModel('models/gemini-2.5-flash')
 
 # 3. 화면 구성
 st.title("🏠 우리 집 물건 위치 비서")
-user_input = st.text_input("질문하거나 위치를 알려주세요", placeholder="예: '망치 어디 있어?' 또는 '침대 밑에 상자 둠'")
+st.write("물건의 위치를 알려주면 저장하고, 물어보면 찾아줍니다.")
+
+user_input = st.text_input("질문하거나 위치를 알려주세요", placeholder="예: '망치 거실 서랍에 둠' 또는 '망치 어디 있어?'")
 
 if st.button("보내기") and user_input:
+    # 시트에서 최신 데이터 가져오기
     data = sheet.get_all_records()
-    prompt = f"현재 데이터: {data}\n사용자 입력: {user_input}\n질문이면 답변하고, 저장 요청이면 'SAVE|물건|위치'라고만 답해줘."
     
-    response = model.generate_content(prompt).text
+    # AI에게 줄 지시문(프롬프트) 강화
+    prompt = f"""
+    너는 우리 집 물건의 위치를 완벽하게 기억하는 똑똑한 비서야.
     
+    [현재 저장된 물건 데이터]
+    {data}
+    
+    [사용자 입력]
+    {user_input}
+    
+    [규칙]
+    1. 사용자가 물건의 위치를 새로 알려주면 반드시 'SAVE|물건|위치' 형식으로만 대답해.
+    2. 사용자가 물건의 위치를 물어보면, 위 데이터에서 해당 물건을 찾아 그 위치를 친절하게 알려줘.
+    3. 만약 데이터에 없는 물건을 물어보면 "죄송해요, 그 물건의 위치는 아직 저장되지 않았어요."라고 답해줘.
+    4. 데이터에 있는 물건이라도 사용자가 위치를 새로 알려주면 업데이트를 위해 SAVE 형식을 사용해.
+    """
+    
+    with st.spinner('생각 중...'):
+        response = model.generate_content(prompt).text.strip()
+    
+    # 저장 로직
     if "SAVE|" in response:
-        _, item, loc = response.split("|")
-        sheet.append_row([item, loc.strip()])
-        st.success(f"✅ '{item}' 위치를 '{loc}'로 저장했습니다!")
+        try:
+            parts = response.split("|")
+            if len(parts) == 3:
+                _, item, loc = parts
+                sheet.append_row([item.strip(), loc.strip()])
+                st.success(f"✅ '{item.strip()}' 위치를 '{loc.strip()}'(으)로 잘 기억해둘게요!")
+            else:
+                st.info(response) # 형식이 안 맞을 경우 대비
+        except:
+            st.error("저장 중 오류가 발생했습니다.")
+    # 답변 로직
     else:
         st.info(response)
+
+# (선택사항) 저장된 데이터 미리보기 (디버깅용)
+if st.checkbox("저장된 데이터 전체 보기"):
+    st.write(sheet.get_all_records())
