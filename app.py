@@ -36,12 +36,6 @@ st.markdown("""
         padding-top: 5px;
         padding-bottom: 5px;
     }
-    /* 모바일에서 여백 줄이기 */
-    .block-container {
-        padding-top: 2rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-    }
     </style>
     <div class="main-title">🏠 우리 집 물건 위치 비서</div>
     """, unsafe_allow_html=True)
