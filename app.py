@@ -27,7 +27,19 @@ genai.configure(api_key=gemini_key)
 model = genai.GenerativeModel('models/gemini-2.5-flash')
 
 # 3. 화면 구성
-st.title("🏠 우리 집 물건 위치 비서")
+st.markdown("""
+    <style>
+    .main-title {
+        font-size: 22px !important;  /* 24px보다 조금 더 줄였습니다 */
+        font-weight: bold;
+        color: #1E1E1E;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+    </style>
+    <div class="main-title">🏠 우리 집 물건 위치 비서</div>
+    """, unsafe_allow_html=True)
+
 st.write("물건의 위치를 알려주면 저장하고, 물어보면 찾아줍니다.")
 
 user_input = st.text_input("질문하거나 위치를 알려주세요", placeholder="예: '망치 거실 서랍에 둠' 또는 '망치 어디 있어?'")
