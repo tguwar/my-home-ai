@@ -25,7 +25,7 @@ except Exception as e:
 
 genai.configure(api_key=gemini_key)
 #model = genai.GenerativeModel('models/gemini-2.5-flash')
-model = genai.GenerativeModel('models/gemini-2.0-flash-lite')
+model = genai.GenerativeModel('models/gemini-flash-latest')
 
 # 3. 화면 구성 (스마트폰 최적화 버전)
 st.markdown("""
